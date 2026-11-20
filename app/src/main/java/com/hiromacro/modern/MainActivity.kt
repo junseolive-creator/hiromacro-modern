@@ -1,84 +1,82 @@
 package com.hiromacro.modern
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : Activity() {
-    private lateinit var logView: TextView
-    private var picker: ColorPickerOverlay? = null
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var listLayout: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val layout = LinearLayout(this).apply {
+        val scroll = ScrollView(this)
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 40, 40, 40)
+            setPadding(32, 32, 32, 32)
         }
-        val title = TextView(this).apply {
-            text = "HiroMacro Modern\n아쿠아리움 매크로"
-            textSize = 24f
-        }
-        logView = TextView(this).apply {
-            text = "로그 대기중..."
-            textSize = 14f
-        }
-        val btnAccess = Button(this).apply { text = "1. 접근성 권한 켜기" }
-        val btnOverlay = Button(this).apply { text = "2. 다른 앱 위에 표시 허용" }
-        val btnStart = Button(this).apply { text = "3. 아쿠아리움 매크로 시작" }
-        val btnStop = Button(this).apply { text = "중지" }
-        val btnPicker = Button(this).apply { text = "스포이드로 색상 뽑기" }
+        scroll.addView(root)
+        setContentView(scroll)
 
+        val title = TextView(this).apply {
+            text = "HiroMacro Modern"
+            textSize = 26f
+        }
+        root.addView(title)
+
+        val btnAccess = Button(this).apply { text = "1. 접근성 권한 켜기" }
         btnAccess.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        btnOverlay.setOnClickListener {
-            if (!Settings.canDrawOverlays(this)) {
-                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-            } else Toast.makeText(this, "이미 허용됨", Toast.LENGTH_SHORT).show()
-        }
-        btnStart.setOnClickListener {
-            val svc = MacroAccessibilityService.instance
-            if (svc == null) {
-                Toast.makeText(this, "접근성 서비스를 먼저 켜세요", Toast.LENGTH_LONG).show()
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                return@setOnClickListener
-            }
-            runOnUiThread { logView.append("매크로 시작\n") }
-            svc.startAqua()
-            Toast.makeText(this, "매크로 시작!", Toast.LENGTH_SHORT).show()
-        }
-        btnStop.setOnClickListener {
-            MacroAccessibilityService.instance?.stopMacro()
-            Toast.makeText(this, "중지됨", Toast.LENGTH_SHORT).show()
-        }
-        btnPicker.setOnClickListener {
-            if (!Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, "오버레이 권한 먼저 허용하세요", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-            picker = ColorPickerOverlay(this)
-            picker?.onColorPicked = { x, y, color ->
-                val hex = String.format("#%06X", 0xFFFFFF and color)
-                runOnUiThread { logView.append("\nPicked $x,$y $hex") }
-            }
-            picker?.show()
-        }
+        root.addView(btnAccess)
 
-        layout.addView(title)
-        layout.addView(btnAccess)
-        layout.addView(btnOverlay)
-        layout.addView(btnStart)
-        layout.addView(btnStop)
-        layout.addView(btnPicker)
-        layout.addView(logView)
-        val scroll = ScrollView(this).apply { addView(layout) }
-        setContentView(scroll)
+        val btnOverlay = Button(this).apply { text = "2. 다른 앱 위에 표시 허용" }
+        btnOverlay.setOnClickListener {
+            val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivity(i)
+        }
+        root.addView(btnOverlay)
+
+        val btnNew = Button(this).apply { text = "+ 새 매크로 만들기" }
+        btnNew.setOnClickListener {
+            MacroStore.current = Macro("매크로 ${MacroStore.list.size + 1}", mutableListOf())
+            startActivity(Intent(this, MacroEditorActivity::class.java))
+        }
+        root.addView(btnNew)
+
+        val stop = Button(this).apply { text = "■ 중지" }
+        stop.setOnClickListener { MacroAccessibilityService.stopMacro() }
+        root.addView(stop)
+
+        listLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(listLayout)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        listLayout.removeAllViews()
+        if (MacroStore.list.isEmpty()) {
+            val tv = TextView(this).apply { text = "아직 매크로가 없어.\n+ 새 매크로 만들기로 시작해." }
+            listLayout.addView(tv)
+        }
+        MacroStore.list.forEach { m ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            val tv = TextView(this).apply { text = "${m.name} - ${m.steps.size}줄"; textSize = 18f }
+            val edit = Button(this).apply { text = "편집" }
+            edit.setOnClickListener {
+                MacroStore.current = m
+                startActivity(Intent(this, MacroEditorActivity::class.java))
+            }
+            val run = Button(this).apply { text = "▶ 실행" }
+            run.setOnClickListener {
+                MacroAccessibilityService.startMacro(m)
+                Toast.makeText(this, "실행 시작: ${m.name}", Toast.LENGTH_SHORT).show()
+            }
+            row.addView(tv); row.addView(edit); row.addView(run)
+            listLayout.addView(row)
+        }
     }
 }
