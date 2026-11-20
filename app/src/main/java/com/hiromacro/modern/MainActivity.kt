@@ -50,7 +50,7 @@ class MainActivity : Activity() {
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 return@setOnClickListener
             }
-            MacroEngine.onLog = { msg -> runOnUiThread { logView.append("\n$msg") } }
+            runOnUiThread { logView.append("매크로 시작\n") }
             svc.startAqua()
             Toast.makeText(this, "매크로 시작!", Toast.LENGTH_SHORT).show()
         }
