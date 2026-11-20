@@ -55,7 +55,7 @@ class MainActivity : Activity() {
             Toast.makeText(this, "매크로 시작!", Toast.LENGTH_SHORT).show()
         }
         btnStop.setOnClickListener {
-            MacroEngine.stop()
+            MacroAccessibilityService.instance?.stopMacro()
             Toast.makeText(this, "중지됨", Toast.LENGTH_SHORT).show()
         }
         btnPicker.setOnClickListener {
