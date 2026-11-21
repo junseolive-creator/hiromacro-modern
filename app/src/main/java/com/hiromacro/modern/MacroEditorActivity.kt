@@ -44,16 +44,17 @@ class MacroEditorActivity : Activity() {
         }
 
         addBtn("● 녹화 시작") {
+MacroAccessibilityService.startRecording()
+    Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
+    finish()
+}
         addBtn("터치+") { askTouch() }
         addBtn("대기+") { askWait() }
         addBtn("스와이프+") { askSwipe() }
         addBtn("색상+") { askColor() }
         addBtn("Goto+") { askGoto() }
         
-    MacroAccessibilityService.startRecording()
-    Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
-    finish()
-}
+    
         root.addView(btnRow)
 
         val save = Button(this).apply { text = "저장하고 돌아가기" }
