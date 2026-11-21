@@ -176,7 +176,53 @@ fun showRecordingOverlay() {
     stopButtonView = stopBtn
     wm.addView(stopBtn, stopParams)
 }
+fun showControlOverlay() {
+    val ctx = instance ?: return
+    if (stopButtonView != null) return
+    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
 
+    val layout = android.widget.LinearLayout(ctx)
+    layout.orientation = android.widget.LinearLayout.HORIZONTAL
+
+    val recBtn = android.widget.Button(ctx)
+    recBtn.text = "● 녹화"
+    recBtn.setBackgroundColor(android.graphics.Color.RED)
+    recBtn.setTextColor(android.graphics.Color.WHITE)
+    recBtn.setOnClickListener { startRecording() }
+
+    val stopBtn = android.widget.Button(ctx)
+    stopBtn.text = "■ 정지"
+    stopBtn.setBackgroundColor(android.graphics.Color.BLACK)
+    stopBtn.setTextColor(android.graphics.Color.WHITE)
+    stopBtn.setOnClickListener { stopRecording() }
+
+    val playBtn = android.widget.Button(ctx)
+    playBtn.text = "▶ 플레이"
+    playBtn.setBackgroundColor(android.graphics.Color.GREEN)
+    playBtn.setTextColor(android.graphics.Color.WHITE)
+    playBtn.setOnClickListener {
+        val macro = recordingTarget
+        if (macro != null) startMacro(macro)
+    }
+
+    layout.addView(recBtn)
+    layout.addView(stopBtn)
+    layout.addView(playBtn)
+
+    val params = android.view.WindowManager.LayoutParams(
+        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+        android.graphics.PixelFormat.TRANSLUCENT
+    )
+    params.gravity = android.view.Gravity.TOP or android.view.Gravity.LEFT
+    params.x = 20
+    params.y = 200
+
+    stopButtonView = layout
+    wm.addView(layout, params)
+}
 fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
     val ctx = instance ?: return
     val tv = android.widget.TextView(ctx)
