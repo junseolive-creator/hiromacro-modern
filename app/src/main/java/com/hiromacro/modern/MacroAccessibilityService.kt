@@ -207,6 +207,14 @@ fun showControlOverlay() {
 
     stopButtonView = layout
     wm.addView(layout, params)
+    }
+fun hideControlOverlay() {
+    try {
+        val ctx = instance ?: return
+        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        stopButtonView?.let { wm.removeView(it) }
+    } catch (e: Exception) {}
+    stopButtonView = null
 }
 fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
     val ctx = instance ?: return
