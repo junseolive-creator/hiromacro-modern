@@ -43,12 +43,13 @@ class MacroEditorActivity : Activity() {
             btnRow.addView(b)
         }
 
+        addBtn("● 녹화 시작") {
         addBtn("터치+") { askTouch() }
         addBtn("대기+") { askWait() }
         addBtn("스와이프+") { askSwipe() }
         addBtn("색상+") { askColor() }
         addBtn("Goto+") { askGoto() }
-        addBtn("● 녹화 시작") {
+        
     MacroAccessibilityService.startRecording()
     Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
     finish()
