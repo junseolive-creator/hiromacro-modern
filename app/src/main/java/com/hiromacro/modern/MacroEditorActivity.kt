@@ -12,7 +12,7 @@ object MacroStore {
     var list: MutableList<Macro> = mutableListOf()
 }
 
-class MacroEditorActivity : Activity()
+class MacroEditorActivity : Activity() {
 
     private lateinit var listLayout: LinearLayout
 
