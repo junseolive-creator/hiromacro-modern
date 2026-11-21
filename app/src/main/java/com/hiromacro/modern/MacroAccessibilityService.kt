@@ -154,27 +154,6 @@ fun showRecordingOverlay() {
     recordingOverlay = layout
     wm.addView(layout, params)
 
-    // 2. 정지 버튼은 따로 띄움 - 얘만 터치 받음
-    val stopBtn = android.widget.Button(ctx)
-    stopBtn.text = "■ 정지"
-    stopBtn.setBackgroundColor(android.graphics.Color.RED)
-    stopBtn.setTextColor(android.graphics.Color.WHITE)
-    stopBtn.textSize = 18f
-    stopBtn.setOnClickListener {
-        stopRecording()
-    }
-    val stopParams = android.view.WindowManager.LayoutParams(
-        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-        android.graphics.PixelFormat.TRANSLUCENT
-    )
-    stopParams.x = 50
-    stopParams.y = 200
-    stopParams.gravity = android.view.Gravity.TOP or android.view.Gravity.LEFT
-    stopButtonView = stopBtn
-    wm.addView(stopBtn, stopParams)
 }
 fun showControlOverlay() {
     val ctx = instance ?: return
