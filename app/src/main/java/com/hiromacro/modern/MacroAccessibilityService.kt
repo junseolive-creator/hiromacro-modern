@@ -20,6 +20,7 @@ class MacroAccessibilityService : AccessibilityService() {
         var isRecording = false
         var markerCount = 0
         var recordingOverlay: android.view.View? = null
+        var stopButtonView: android.view.View? = null
         fun startMacro(macro: Macro) {
             val svc = instance ?: return
             engine?.stop()
@@ -139,42 +140,41 @@ fun showRecordingOverlay() {
     val ctx = instance ?: return
     if (recordingOverlay != null) return
     val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+
+    // 1. 동그라미만 보여주는 막 - 터치 절대 안 받음
     val params = android.view.WindowManager.LayoutParams(
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
         android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
         android.graphics.PixelFormat.TRANSLUCENT
     )
     val layout = android.widget.FrameLayout(ctx)
-    val stopBtn = android.widget.Button(ctx)
-stopBtn.text = "■ 정지"
-stopBtn.setBackgroundColor(android.graphics.Color.RED)
-stopBtn.setTextColor(android.graphics.Color.WHITE)
-stopBtn.textSize = 18f
-stopBtn.setOnClickListener {
-    stopRecording()
-}
-val btnParams = android.widget.FrameLayout.LayoutParams(
-    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-)
-btnParams.leftMargin = 50
-btnParams.topMargin = 120
-layout.addView(stopBtn, btnParams)
-    layout.setOnTouchListener { _, event ->
-        if (event.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
-            val x = event.rawX.toInt()
-            val y = event.rawY.toInt()
-            recordedSteps.add(MacroStep.Touch(x, y))
-            markerCount++
-            showMarker(layout, x, y, markerCount)
-        }
-        false
-    }
     recordingOverlay = layout
     wm.addView(layout, params)
+
+    // 2. 정지 버튼은 따로 띄움 - 얘만 터치 받음
+    val stopBtn = android.widget.Button(ctx)
+    stopBtn.text = "■ 정지"
+    stopBtn.setBackgroundColor(android.graphics.Color.RED)
+    stopBtn.setTextColor(android.graphics.Color.WHITE)
+    stopBtn.textSize = 18f
+    stopBtn.setOnClickListener {
+        stopRecording()
+    }
+    val stopParams = android.view.WindowManager.LayoutParams(
+        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+        android.graphics.PixelFormat.TRANSLUCENT
+    )
+    stopParams.x = 50
+    stopParams.y = 200
+    stopParams.gravity = android.view.Gravity.TOP or android.view.Gravity.LEFT
+    stopButtonView = stopBtn
+    wm.addView(stopBtn, stopParams)
 }
 
 fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
@@ -210,7 +210,9 @@ fun hideRecordingOverlay() {
         val ctx = instance ?: return
         val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
         recordingOverlay?.let { wm.removeView(it) }
+    stopButtonView?.let { wm.removeView(it) }
     } catch (e: Exception) { }
     recordingOverlay = null
+    stopButtonView = null
 }
 }
