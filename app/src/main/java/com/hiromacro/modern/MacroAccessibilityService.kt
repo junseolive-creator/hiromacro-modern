@@ -1,3 +1,4 @@
+import android.graphics.Rect
 package com.hiromacro.modern
 
 import android.accessibilityservice.AccessibilityService
@@ -13,6 +14,8 @@ import android.widget.LinearLayout
 class MacroAccessibilityService : AccessibilityService() {
 
     companion object {
+        var recordedSteps = mutableListOf<MacroStep>()
+        var recordingTarget: Macro? = null
         var instance: MacroAccessibilityService? = null
         var engine: MacroEngine? = null
         var isRecording = false
@@ -31,14 +34,23 @@ class MacroAccessibilityService : AccessibilityService() {
         }
 
         fun startRecording() {
+            recordingTarget = MacroStore.current
+            recordedSteps.clear()
             isRecording = true
-            instance?.showFloating()
+            showFloating()
         }
 
         fun stopRecording() {
             isRecording = false
-            instance?.hideFloating()
-        }
+            hideFloating()
+            recordingTarget?.let { target ->
+                target.steps.addAll(recordedSteps)
+                if (!MacroStore.list.contains(target)) {
+                   MacroStore.list.add(target)
+                }
+            }
+            recordedSteps.clear()
+         }
     }
 
     private var windowManager: WindowManager? = null
@@ -102,7 +114,16 @@ class MacroAccessibilityService : AccessibilityService() {
         floatingView = null
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!isRecording) return
+        if (event?.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED) return
+        val node = event.source ?: return
+        val rect = Rect()
+        node.getBoundsInScreen(rect)
+        node.recycle()
+        if (rect.width() == 0 || rect.height() == 0) return
+        recordedSteps.add(MacroStep.Touch(rect.centerX(), rect.centerY()))
+}
 
     override fun onInterrupt() {}
 
