@@ -39,13 +39,13 @@ class MacroAccessibilityService : AccessibilityService() {
             markerCount = 0
             isRecording = true
             instance?.showFloating()
-            showRecordingOverlay()
+            instance?.showRecordingOverlay()
         }
 
         fun stopRecording() {
             isRecording = false
             instance?.hideFloating()
-            hideRecordingOverlay()
+            instance?.hideRecordingOverlay()
             recordingTarget?.let { target ->
                 target.steps.addAll(recordedSteps)
                 if (!MacroStore.list.contains(target)) {
