@@ -43,7 +43,8 @@ class MainActivity : Activity() {
         val btnNew = Button(this).apply { text = "+ 새 매크로 만들기" }
         btnNew.setOnClickListener {
             MacroStore.current = Macro("매크로 ${MacroStore.list.size + 1}", mutableListOf())
-            startActivity(Intent(this, MacroEditorActivity::class.java))
+            MacroAccessibilityService.showControlOverlay()
+            moveTaskToBack(true)
         }
         root.addView(btnNew)
 
