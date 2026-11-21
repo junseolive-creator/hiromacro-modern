@@ -182,11 +182,18 @@ fun showControlOverlay() {
     playBtn.setOnClickListener {
     // 나중에 재생 기능 연결
     }
-
+    val closeBtn = android.widget.Button(ctx)
+    closeBtn.text = "✕ 닫기"
+    closeBtn.setBackgroundColor(android.graphics.Color.DKGRAY)
+    closeBtn.setTextColor(android.graphics.Color.WHITE)
+    closeBtn.setOnClickListener {
+        hideControlOverlay()
+        hideRecordingOverlay()
+    }
     layout.addView(recBtn)
     layout.addView(stopBtn)
     layout.addView(playBtn)
-
+    layout.addView(closeBtn)
     val params = android.view.WindowManager.LayoutParams(
         android.view.WindowManager.LayoutParams.WRAP_CONTENT,
         android.view.WindowManager.LayoutParams.WRAP_CONTENT,
