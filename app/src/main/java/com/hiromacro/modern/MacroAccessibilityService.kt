@@ -1,6 +1,5 @@
-import android.graphics.Rect
 package com.hiromacro.modern
-
+import android.graphics.Rect
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.graphics.PixelFormat
