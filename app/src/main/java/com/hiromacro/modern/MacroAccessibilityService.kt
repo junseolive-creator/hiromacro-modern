@@ -36,12 +36,12 @@ class MacroAccessibilityService : AccessibilityService() {
             recordingTarget = MacroStore.current
             recordedSteps.clear()
             isRecording = true
-            showFloating()
+            instance?.showFloating()
         }
 
         fun stopRecording() {
             isRecording = false
-            hideFloating()
+            instance?.hideFloating()
             recordingTarget?.let { target ->
                 target.steps.addAll(recordedSteps)
                 if (!MacroStore.list.contains(target)) {
