@@ -148,6 +148,21 @@ fun showRecordingOverlay() {
         android.graphics.PixelFormat.TRANSLUCENT
     )
     val layout = android.widget.FrameLayout(ctx)
+    val stopBtn = android.widget.Button(ctx)
+stopBtn.text = "■ 정지"
+stopBtn.setBackgroundColor(android.graphics.Color.RED)
+stopBtn.setTextColor(android.graphics.Color.WHITE)
+stopBtn.textSize = 18f
+stopBtn.setOnClickListener {
+    stopRecording()
+}
+val btnParams = android.widget.FrameLayout.LayoutParams(
+    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+)
+btnParams.leftMargin = 50
+btnParams.topMargin = 120
+layout.addView(stopBtn, btnParams)
     layout.setOnTouchListener { _, event ->
         if (event.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
             val x = event.rawX.toInt()
@@ -166,16 +181,27 @@ fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
     val ctx = instance ?: return
     val tv = android.widget.TextView(ctx)
     tv.text = num.toString()
-    tv.textSize = 18f
+    tv.textSize = 16f
     tv.setTextColor(android.graphics.Color.WHITE)
-    tv.setBackgroundColor(android.graphics.Color.RED)
-    tv.setPadding(18, 10, 18, 10)
-    val p = android.widget.FrameLayout.LayoutParams(
-        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-    )
-    p.leftMargin = x - 20
-    p.topMargin = y - 40
+    tv.gravity = android.view.Gravity.CENTER
+
+    // 동그랗게 만들기
+    val drawable = android.graphics.drawable.GradientDrawable()
+    drawable.shape = android.graphics.drawable.GradientDrawable.OVAL
+    drawable.setColor(android.graphics.Color.RED)
+    tv.background = drawable
+
+    // 상태바 높이 빼기
+    var statusBarHeight = 0
+    val resId = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
+    if (resId > 0) {
+        statusBarHeight = ctx.resources.getDimensionPixelSize(resId)
+    }
+
+    val size = 80
+    val p = android.widget.FrameLayout.LayoutParams(size, size)
+    p.leftMargin = x - 40
+    p.topMargin = y - 40 - statusBarHeight
     parent.addView(tv, p)
 }
 
