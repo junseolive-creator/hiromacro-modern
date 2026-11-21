@@ -255,9 +255,9 @@ fun hideRecordingOverlay() {
         val ctx = instance ?: return
         val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
         recordingOverlay?.let { wm.removeView(it) }
-    stopButtonView?.let { wm.removeView(it) }
+    
     } catch (e: Exception) { }
     recordingOverlay = null
-    stopButtonView = null
+    
 }
 }
