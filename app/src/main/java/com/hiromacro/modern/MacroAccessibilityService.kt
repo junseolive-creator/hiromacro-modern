@@ -201,8 +201,7 @@ fun showControlOverlay() {
     playBtn.setBackgroundColor(android.graphics.Color.GREEN)
     playBtn.setTextColor(android.graphics.Color.WHITE)
     playBtn.setOnClickListener {
-        val macro = recordingTarget
-        if (macro != null) startMacro(macro)
+    // 나중에 재생 기능 연결
     }
 
     layout.addView(recBtn)
