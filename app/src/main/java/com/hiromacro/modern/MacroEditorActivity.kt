@@ -44,7 +44,7 @@ class MacroEditorActivity : Activity() {
         }
 
         addBtn("● 녹화 시작") {
-    MacroAccessibilityService.showControlOverlay()
+    MacroAccessibilityService.startRecording()
 val home = android.content.Intent(android.content.Intent.ACTION_MAIN)
 home.addCategory(android.content.Intent.CATEGORY_HOME)
 home.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
