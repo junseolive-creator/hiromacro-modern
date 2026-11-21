@@ -18,7 +18,8 @@ class MacroAccessibilityService : AccessibilityService() {
         var instance: MacroAccessibilityService? = null
         var engine: MacroEngine? = null
         var isRecording = false
-
+        var markerCount = 0
+        var recordingOverlay: android.view.View? = null
         fun startMacro(macro: Macro) {
             val svc = instance ?: return
             engine?.stop()
@@ -35,13 +36,16 @@ class MacroAccessibilityService : AccessibilityService() {
         fun startRecording() {
             recordingTarget = MacroStore.current
             recordedSteps.clear()
+            markerCount = 0
             isRecording = true
             instance?.showFloating()
+            showRecordingOverlay()
         }
 
         fun stopRecording() {
             isRecording = false
             instance?.hideFloating()
+            hideRecordingOverlay()
             recordingTarget?.let { target ->
                 target.steps.addAll(recordedSteps)
                 if (!MacroStore.list.contains(target)) {
@@ -131,4 +135,56 @@ class MacroAccessibilityService : AccessibilityService() {
         hideFloating()
         instance = null
     }
+fun showRecordingOverlay() {
+    val ctx = instance ?: return
+    if (recordingOverlay != null) return
+    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+    val params = android.view.WindowManager.LayoutParams(
+        android.view.WindowManager.LayoutParams.MATCH_PARENT,
+        android.view.WindowManager.LayoutParams.MATCH_PARENT,
+        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        android.graphics.PixelFormat.TRANSLUCENT
+    )
+    val layout = android.widget.FrameLayout(ctx)
+    layout.setOnTouchListener { _, event ->
+        if (event.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
+            val x = event.rawX.toInt()
+            val y = event.rawY.toInt()
+            recordedSteps.add(MacroStep.Touch(x, y))
+            markerCount++
+            showMarker(layout, x, y, markerCount)
+        }
+        false
+    }
+    recordingOverlay = layout
+    wm.addView(layout, params)
+}
+
+fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
+    val ctx = instance ?: return
+    val tv = android.widget.TextView(ctx)
+    tv.text = num.toString()
+    tv.textSize = 18f
+    tv.setTextColor(android.graphics.Color.WHITE)
+    tv.setBackgroundColor(android.graphics.Color.RED)
+    tv.setPadding(18, 10, 18, 10)
+    val p = android.widget.FrameLayout.LayoutParams(
+        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+    )
+    p.leftMargin = x - 20
+    p.topMargin = y - 40
+    parent.addView(tv, p)
+}
+
+fun hideRecordingOverlay() {
+    try {
+        val ctx = instance ?: return
+        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        recordingOverlay?.let { wm.removeView(it) }
+    } catch (e: Exception) { }
+    recordingOverlay = null
+}
 }
