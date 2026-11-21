@@ -45,7 +45,12 @@ class MacroEditorActivity : Activity() {
 
         addBtn("● 녹화 시작") {
 MacroAccessibilityService.startRecording()
-    Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
+    MacroAccessibilityService.showControlOverlay()
+val home = android.content.Intent(android.content.Intent.ACTION_MAIN)
+home.addCategory(android.content.Intent.CATEGORY_HOME)
+home.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+startActivity(home)
+            Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
     finish()
 }
         addBtn("터치+") { askTouch() }
