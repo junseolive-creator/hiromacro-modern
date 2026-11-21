@@ -5,14 +5,14 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import android.app.Activity
 
 object MacroStore {
     var current: Macro = Macro("새 매크로", mutableListOf())
     var list: MutableList<Macro> = mutableListOf()
 }
 
-class MacroEditorActivity : AppCompatActivity() {
+class MacroEditorActivity : Activity()
 
     private lateinit var listLayout: LinearLayout
 
@@ -48,6 +48,11 @@ class MacroEditorActivity : AppCompatActivity() {
         addBtn("스와이프+") { askSwipe() }
         addBtn("색상+") { askColor() }
         addBtn("Goto+") { askGoto() }
+        addBtn("● 녹화 시작") {
+    MacroAccessibilityService.startRecording()
+    Toast.makeText(this, "녹화 시작 - 플로팅 버튼 확인", Toast.LENGTH_SHORT).show()
+    finish()
+}
         root.addView(btnRow)
 
         val save = Button(this).apply { text = "저장하고 돌아가기" }
