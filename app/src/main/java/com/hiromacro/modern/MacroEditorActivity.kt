@@ -1,9 +1,9 @@
 package com.hiromacro.modern
 
+import android.app.Activity
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 
-class MacroEditorActivity : AppCompatActivity() {
+class MacroEditorActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         finish()
