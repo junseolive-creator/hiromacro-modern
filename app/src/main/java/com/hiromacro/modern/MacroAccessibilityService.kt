@@ -13,6 +13,9 @@ import android.widget.LinearLayout
 class MacroAccessibilityService : AccessibilityService() {
 
     companion object {
+        fun showControlOverlay() {
+            instance?.showControlOverlay()
+        }
         var recordedSteps = mutableListOf<MacroStep>()
         var recordingTarget: Macro? = null
         var instance: MacroAccessibilityService? = null
