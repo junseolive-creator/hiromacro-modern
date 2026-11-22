@@ -131,15 +131,8 @@ class MacroAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (!isRecording) return
-        if (event?.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED) return
-        val node = event.source ?: return
-        val rect = Rect()
-        node.getBoundsInScreen(rect)
-        node.recycle()
-        if (rect.width() == 0 || rect.height() == 0) return
-        recordedSteps.add(MacroStep.Touch(rect.centerX(), rect.centerY()))
-}
+    // 녹화는 오버레이 터치로만 함. 이벤트로는 안 함
+    }
 
     override fun onInterrupt() {}
 
@@ -292,7 +285,7 @@ fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
     p.leftMargin = x - 40
     p.topMargin = y - 40 - statusBarHeight
     parent.addView(tv, p)
-}
+    }
 
 fun hideRecordingOverlay() {
     try {
@@ -303,5 +296,45 @@ fun hideRecordingOverlay() {
     } catch (e: Exception) { }
     recordingOverlay = null
     
-}
-}
+    }
+    fun showRecordingOverlay() {
+    hideRecordingOverlay()
+    val wm = instance?.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
+    val params = android.view.WindowManager.LayoutParams(
+        android.view.WindowManager.LayoutParams.MATCH_PARENT,
+        android.view.WindowManager.LayoutParams.MATCH_PARENT,
+        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        android.graphics.PixelFormat.TRANSLUCENT
+    )
+    val view = android.view.View(instance).apply {
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        setOnTouchListener { _, ev ->
+            if (ev.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
+                val x = ev.x.toInt()
+                val y = ev.y.toInt()
+                recordedSteps.add(MacroStep.Touch(x, y))
+                showMarker(x, y)
+                hideRecordingOverlay()
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val svc = instance ?: return@postDelayed
+                    val path = android.graphics.Path().apply {
+                        moveTo(x.toFloat(), y.toFloat())
+                        lineTo(x.toFloat() + 1f, y.toFloat() + 1f)
+                    }
+                    val desc = android.accessibilityservice.GestureDescription.Builder()
+                        .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 100))
+                        .build()
+                    svc.dispatchGesture(desc, null, null)
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (isRecording) showRecordingOverlay()
+                    }, 150)
+                }, 10)
+                true
+            } else false
+        }
+    }
+    recordingOverlay = view
+    wm.addView(view, params)
+    }
+    }
