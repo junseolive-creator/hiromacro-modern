@@ -130,16 +130,22 @@ class MacroAccessibilityService : AccessibilityService() {
         floatingView = null
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-    // 녹화는 오버레이 터치로만 함. 이벤트로는 안 함
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+    if (!isRecording) return
+    if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED) {
+        val node = event.source ?: return
+        val rect = android.graphics.Rect()
+        node.getBoundsInScreen(rect)
+        val x = rect.centerX()
+        val y = rect.centerY()
+        // 컨트롤 버튼(녹화/정지) 클릭은 저장에서 빼야 해
+        // 안 빼면 정지 버튼 누른 것도 매크로에 저장돼
+        if (y < 250) return
+        recordedSteps.add(MacroStep.Touch(x, y))
+        val overlay = recordingOverlay as? android.widget.FrameLayout
+        if (overlay != null) showMarker(overlay, x, y, recordedSteps.size)
+        node.recycle()
     }
-
-    override fun onInterrupt() {}
-
-    override fun onDestroy() {
-        super.onDestroy()
-        hideFloating()
-        instance = null
     }
 
 fun showControlOverlay() {
