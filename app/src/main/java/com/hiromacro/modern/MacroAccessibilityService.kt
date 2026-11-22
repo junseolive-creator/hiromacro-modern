@@ -141,25 +141,7 @@ class MacroAccessibilityService : AccessibilityService() {
         hideFloating()
         instance = null
     }
-fun showRecordingOverlay() {
-    val ctx = instance ?: return
-    if (recordingOverlay != null) return
-    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
 
-    // 1. 동그라미만 보여주는 막 - 터치 절대 안 받음
-    val params = android.view.WindowManager.LayoutParams(
-        android.view.WindowManager.LayoutParams.MATCH_PARENT,
-        android.view.WindowManager.LayoutParams.MATCH_PARENT,
-        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-        android.graphics.PixelFormat.TRANSLUCENT
-    )
-    val layout = android.widget.FrameLayout(ctx)
-    recordingOverlay = layout
-    wm.addView(layout, params)
-
-}
 fun showControlOverlay() {
     val ctx = instance ?: return
     if (stopButtonView != null) return
@@ -307,14 +289,14 @@ fun hideRecordingOverlay() {
         android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         android.graphics.PixelFormat.TRANSLUCENT
     )
-    val view = android.view.View(instance).apply {
+    val view = android.widget.FrameLayout(instance).apply {
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
         setOnTouchListener { _, ev ->
             if (ev.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
                 val x = ev.x.toInt()
                 val y = ev.y.toInt()
                 recordedSteps.add(MacroStep.Touch(x, y))
-                showMarker(x, y)
+                showMarker(view, x, y, recordedSteps.size)
                 hideRecordingOverlay()
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     val svc = instance ?: return@postDelayed
