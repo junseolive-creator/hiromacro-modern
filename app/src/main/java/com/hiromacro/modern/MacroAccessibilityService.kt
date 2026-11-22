@@ -11,7 +11,26 @@ import android.widget.Button
 import android.widget.LinearLayout
 
 class MacroAccessibilityService : AccessibilityService() {
+        override fun onInterrupt() {
+    }
 
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+        if (!Companion.isRecording) return
+        if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            val node = event.source ?: return
+            val rect = android.graphics.Rect()
+            node.getBoundsInScreen(rect)
+            val x = rect.centerX()
+            val y = rect.centerY()
+            if (y < 250) return
+            Companion.recordedSteps.add(MacroStep.Touch(x, y))
+            val overlay = Companion.recordingOverlay as? android.widget.FrameLayout
+            if (overlay != null) {
+                Companion.showMarker(overlay, x, y, Companion.recordedSteps.size)
+            }
+            node.recycle()
+        }
+    }
     companion object {
         fun showControlOverlay() {
             instance?.showControlOverlay()
