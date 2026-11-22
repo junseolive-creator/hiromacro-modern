@@ -27,7 +27,7 @@ class MacroAccessibilityService : AccessibilityService() {
         fun startMacro(macro: Macro) {
         val svc = instance ?: return
         val target = if (macro.steps.isNotEmpty()) macro
-                     else MacroStore.list.lastOrNull() ?: return
+        else MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: return
         instance?.hideRecordingOverlay()
         instance?.hideFloating()
         engine?.stop()
