@@ -25,10 +25,16 @@ class MacroAccessibilityService : AccessibilityService() {
         var recordingOverlay: android.view.View? = null
         var stopButtonView: android.view.View? = null
         fun startMacro(macro: Macro) {
-            val svc = instance ?: return
-            engine?.stop()
-            engine = MacroEngine(svc) { _, _ -> 0 }
-            engine?.start(macro)
+        val svc = instance ?: return
+        val target = if (macro.steps.isNotEmpty()) macro
+                     else MacroStore.list.lastOrNull() ?: return
+        instance?.hideRecordingOverlay()
+        instance?.hideFloating()
+        engine?.stop()
+        engine = MacroEngine(svc) { _, _ -> }
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            engine?.start(target)
+        }, 500)
         }
 
         fun stopMacro() {
@@ -184,7 +190,8 @@ fun showControlOverlay() {
     playBtn.setOnClickListener {
     hideRecordingOverlay()
     hideFloating()
-    MacroStore.current?.let { startMacro(it) }
+    val m = MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: MacroStore.current ?: return@setOnClickListener
+    startMacro(m)
     }
     val closeBtn = android.widget.Button(ctx)
     closeBtn.text = "✕ 닫기"
