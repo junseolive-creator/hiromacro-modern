@@ -1,4 +1,4 @@
-package com.example.hiromacromodern
+package com.hiromacro.modern
 
 import android.content.Context
 import android.content.Intent
