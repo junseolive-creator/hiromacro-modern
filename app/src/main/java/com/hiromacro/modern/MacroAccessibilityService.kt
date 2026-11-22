@@ -63,7 +63,7 @@ class MacroAccessibilityService : AccessibilityService() {
                 if (!MacroStore.list.contains(target)) {
                    MacroStore.list.add(target)
                 }
-                MacroStore.save(this)
+                instance?.let { MacroStore.save(it) }
             }
             recordedSteps.clear()
             }
