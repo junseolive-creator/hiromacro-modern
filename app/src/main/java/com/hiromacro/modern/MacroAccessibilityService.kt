@@ -278,10 +278,11 @@ fun hideRecordingOverlay() {
     } catch (e: Exception) { }
     recordingOverlay = null
     
-    }
-    fun showRecordingOverlay() {
+}
+fun showRecordingOverlay() {
     hideRecordingOverlay()
-    val wm = instance?.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
+    val ctx = instance ?: return
+    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
     val params = android.view.WindowManager.LayoutParams(
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
@@ -289,34 +290,33 @@ fun hideRecordingOverlay() {
         android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         android.graphics.PixelFormat.TRANSLUCENT
     )
-    val view = android.widget.FrameLayout(instance).apply {
-        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        setOnTouchListener { _, ev ->
-            if (ev.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
-                val x = ev.x.toInt()
-                val y = ev.y.toInt()
-                recordedSteps.add(MacroStep.Touch(x, y))
-                showMarker(view, x, y, recordedSteps.size)
-                hideRecordingOverlay()
+    val layout = android.widget.FrameLayout(ctx)
+    layout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+    layout.setOnTouchListener { _, ev ->
+        if (ev.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
+            val x = ev.x.toInt()
+            val y = ev.y.toInt()
+            recordedSteps.add(MacroStep.Touch(x, y))
+            showMarker(layout, x, y, recordedSteps.size)
+            hideRecordingOverlay()
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val svc = instance ?: return@postDelayed
+                val path = android.graphics.Path().apply {
+                    moveTo(x.toFloat(), y.toFloat())
+                    lineTo(x.toFloat() + 1f, y.toFloat() + 1f)
+                }
+                val desc = android.accessibilityservice.GestureDescription.Builder()
+                    .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 100))
+                    .build()
+                svc.dispatchGesture(desc, null, null)
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    val svc = instance ?: return@postDelayed
-                    val path = android.graphics.Path().apply {
-                        moveTo(x.toFloat(), y.toFloat())
-                        lineTo(x.toFloat() + 1f, y.toFloat() + 1f)
-                    }
-                    val desc = android.accessibilityservice.GestureDescription.Builder()
-                        .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 100))
-                        .build()
-                    svc.dispatchGesture(desc, null, null)
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        if (isRecording) showRecordingOverlay()
-                    }, 150)
-                }, 10)
-                true
-            } else false
-        }
+                    if (isRecording) showRecordingOverlay()
+                }, 150)
+            }, 10)
+            true
+        } else false
     }
-    recordingOverlay = view
-    wm.addView(view, params)
+    recordingOverlay = layout
+    wm.addView(layout, params)
     }
     }
