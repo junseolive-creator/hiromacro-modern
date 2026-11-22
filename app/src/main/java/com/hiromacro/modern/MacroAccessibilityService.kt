@@ -132,9 +132,12 @@ class MacroAccessibilityService : AccessibilityService() {
         floatingView = null
     }
 
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
-    if (!isRecording) return
-    if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED) {
+        override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+        if (!isRecording) return
+        // 클릭 + 길게 누르기 + 선택까지 다 잡아. 클릭만 보면 놓치는 게 많아
+        if (event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED &&
+            event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_LONG_CLICKED &&
+            event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_SELECTED) return
         val node = event.source ?: return
         val rect = android.graphics.Rect()
         node.getBoundsInScreen(rect)
@@ -147,7 +150,6 @@ class MacroAccessibilityService : AccessibilityService() {
         val overlay = recordingOverlay as? android.widget.FrameLayout
         if (overlay != null) showMarker(overlay, x, y, recordedSteps.size)
         node.recycle()
-    }
     }
 
 fun showControlOverlay() {
@@ -241,7 +243,7 @@ fun showPlayMarker(x: Int, y: Int) {
         )
         params.gravity = android.view.Gravity.TOP or android.view.Gravity.START
         params.x = x - 30
-        params.y = y - 30 - statusBarHeight
+        params.y = y - 30
         wm.addView(v, params)
 
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -272,7 +274,7 @@ fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
 
     val size = 80
     val p = android.widget.FrameLayout.LayoutParams(size, size)
-    p.leftMargin = x - 40
+    p.topMargin = y - 40
     p.topMargin = y - 40 - statusBarHeight
     parent.addView(tv, p)
     }
