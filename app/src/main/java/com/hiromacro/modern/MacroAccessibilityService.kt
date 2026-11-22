@@ -31,7 +31,7 @@ class MacroAccessibilityService : AccessibilityService() {
         instance?.hideRecordingOverlay()
         instance?.hideFloating()
         engine?.stop()
-        engine = MacroEngine(svc) { _, _ -> }
+        engine = MacroEngine(svc) { _, _ -> 0 }
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             engine?.start(target)
         }, 500)
