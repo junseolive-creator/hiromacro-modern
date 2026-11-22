@@ -1,311 +1,230 @@
-package com.hiromacro.modern
-import android.graphics.Rect
+package com.example.hiromacromodern
+
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 
 class MacroAccessibilityService : AccessibilityService() {
-        override fun onInterrupt() {
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Companion.instance = this
+    }
+
+    override fun onInterrupt() {}
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!Companion.isRecording) return
+        if (Companion.recordingOverlay != null) return
+        if (event?.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED &&
+            event?.eventType != AccessibilityEvent.TYPE_VIEW_LONG_CLICKED) return
+        val node = event.source ?: return
+        val rect = Rect()
+        node.getBoundsInScreen(rect)
+        val x = rect.centerX()
+        val y = rect.centerY()
+        if (y < 250) return
+        Companion.recordedSteps.add(MacroStep.Touch(x, y))
+        Companion.showMarker2(x, y, Companion.recordedSteps.size)
+        node.recycle()
     }
 
     companion object {
-        fun showControlOverlay() {
-            instance?.showControlOverlay()
-        }
-        fun showPlayMarker(x: Int, y: Int) {
-        instance?.showPlayMarker(x, y)
-        }
-        var recordedSteps = mutableListOf<MacroStep>()
-        var recordingTarget: Macro? = null
         var instance: MacroAccessibilityService? = null
-        var engine: MacroEngine? = null
         var isRecording = false
-        var markerCount = 0
-        var recordingOverlay: android.view.View? = null
-        var stopButtonView: android.view.View? = null
-        fun startMacro(macro: Macro) {
-        val svc = instance ?: return
-        val target = if (macro.steps.isNotEmpty()) macro
-        else MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: return
-        instance?.hideRecordingOverlay()
-        instance?.hideFloating()
-        engine?.stop()
-        engine = MacroEngine(svc) { _, _ -> 0 }
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            engine?.start(target)
-        }, 500)
+        var recordedSteps = mutableListOf<MacroStep.Touch>()
+        var recordingOverlay: View? = null
+        var markerOverlay: FrameLayout? = null
+        var controlOverlay: View? = null
+        var onStopListener: (() -> Unit)? = null
+
+        fun showControlOverlay() {
+            val ctx = instance ?: return
+            hideControlOverlay()
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            )
+            params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            params.y = 80
+            val layout = LinearLayout(ctx)
+            layout.orientation = LinearLayout.HORIZONTAL
+            layout.setBackgroundColor(Color.parseColor("#CC000000"))
+            layout.setPadding(12, 12, 12, 12)
+            fun makeBtn(text: String, action: () -> Unit): Button {
+                val b = Button(ctx)
+                b.text = text
+                b.setTextColor(Color.WHITE)
+                b.setOnClickListener { action() }
+                return b
+            }
+            layout.addView(makeBtn("●") { startRecording() })
+            layout.addView(makeBtn("■") { stopRecording() })
+            layout.addView(makeBtn("▶") { startPlayback(recordedSteps.toList()) })
+            layout.addView(makeBtn("X") { hideControlOverlay(); hideRecordingOverlay(); hideMarkerLayer() })
+            controlOverlay = layout
+            wm.addView(layout, params)
         }
 
-        fun stopMacro() {
-            engine?.stop()
-            engine = null
-            instance?.hideFloating()
+        fun hideControlOverlay() {
+            val ctx = instance ?: return
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            try { if (controlOverlay != null) wm.removeView(controlOverlay) } catch (_: Exception) {}
+            controlOverlay = null
+        }
+
+        fun showMarkerLayer() {
+            if (markerOverlay != null) return
+            val ctx = instance ?: return
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT
+            )
+            val layout = FrameLayout(ctx)
+            markerOverlay = layout
+            wm.addView(layout, params)
+        }
+
+        fun hideMarkerLayer() {
+            val ctx = instance ?: return
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            try { if (markerOverlay != null) wm.removeView(markerOverlay) } catch (_: Exception) {}
+            markerOverlay = null
+        }
+
+        fun showMarker2(x: Int, y: Int, num: Int) {
+            val overlay = markerOverlay ?: return
+            val ctx = instance ?: return
+            val tv = TextView(ctx)
+            tv.text = num.toString()
+            tv.setTextColor(Color.WHITE)
+            tv.setBackgroundColor(Color.RED)
+            tv.textSize = 14f
+            tv.gravity = Gravity.CENTER
+            val size = 80
+            val lp = FrameLayout.LayoutParams(size, size)
+            lp.leftMargin = x - size / 2
+            lp.topMargin = y - size / 2
+            overlay.addView(tv, lp)
+        }
+
+        fun showPlayMarker(x: Int, y: Int) {
+            showMarkerLayer()
+            val overlay = markerOverlay ?: return
+            val ctx = instance ?: return
+            val tv = TextView(ctx)
+            tv.text = "▶"
+            tv.setTextColor(Color.WHITE)
+            tv.setBackgroundColor(Color.BLUE)
+            tv.textSize = 14f
+            tv.gravity = Gravity.CENTER
+            val size = 80
+            val lp = FrameLayout.LayoutParams(size, size)
+            lp.leftMargin = x - size / 2
+            lp.topMargin = y - size / 2
+            overlay.addView(tv, lp)
+            Handler(Looper.getMainLooper()).postDelayed({
+                try { overlay.removeView(tv) } catch (_: Exception) {}
+            }, 500)
+        }
+
+        fun showRecordingOverlay() {
+            hideRecordingOverlay()
+            showMarkerLayer()
+            val ctx = instance ?: return
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            )
+            val layout = FrameLayout(ctx)
+            layout.setBackgroundColor(Color.TRANSPARENT)
+            layout.setOnTouchListener { _, ev ->
+                if (ev.action == MotionEvent.ACTION_DOWN && isRecording) {
+                    val x = ev.x.toInt()
+                    val y = ev.y.toInt()
+                    recordedSteps.add(MacroStep.Touch(x, y))
+                    showMarker2(x, y, recordedSteps.size)
+                    hideRecordingOverlay()
+                    val path = GestureDescription.Builder()
+                        .addStroke(GestureDescription.StrokeDescription(
+                            Path().apply { moveTo(x.toFloat(), y.toFloat()) }, 0, 100
+                        )).build()
+                    instance?.dispatchGesture(path, null, null)
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (isRecording) showRecordingOverlay()
+                    }, 200)
+                    true
+                } else false
+            }
+            recordingOverlay = layout
+            wm.addView(layout, params)
+            showControlOverlay()
+        }
+
+        fun hideRecordingOverlay() {
+            val ctx = instance ?: return
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+            try { if (recordingOverlay != null) wm.removeView(recordingOverlay) } catch (_: Exception) {}
+            recordingOverlay = null
         }
 
         fun startRecording() {
-            recordingTarget = MacroStore.current
             recordedSteps.clear()
-            markerCount = 0
             isRecording = true
-            instance?.showRecordingOverlay()
+            showRecordingOverlay()
         }
 
         fun stopRecording() {
             isRecording = false
-            instance?.hideFloating()
-            instance?.hideRecordingOverlay()
-            recordingTarget?.let { target ->
-                target.steps.addAll(recordedSteps)
-                if (!MacroStore.list.contains(target)) {
-                   MacroStore.list.add(target)
-                }
-                instance?.let { MacroStore.save(it) }
-            }
-            recordedSteps.clear()
-            }
-            }
-
-    private var windowManager: WindowManager? = null
-    private var floatingView: View? = null
-
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        instance = this
-    }
-
-    private fun showFloating() {
-        if (floatingView != null) return
-        try {
-            val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            windowManager = wm
-
-            val layout = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-            }
-
-            val btnStop = Button(this).apply {
-                text = "■ 정지"
-                setOnClickListener {
-                    stopRecording()
-                }
-            }
-            val btnPause = Button(this).apply {
-                text = "|| 일시정지"
-                setOnClickListener {
-                    // 일시정지는 다음 단계에서 녹화 중단 플래그로 연결
-                    isRecording = false
-                    text = "▶ 계속"
-                }
-            }
-            layout.addView(btnStop)
-            layout.addView(btnPause)
-
-            val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                y = 100
-            }
-
-            floatingView = layout
-            wm.addView(layout, params)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun hideFloating() {
-        try {
-            floatingView?.let { windowManager?.removeView(it) }
-        } catch (e: Exception) {
-        }
-        floatingView = null
-    }
-
-        override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
-        if (!isRecording) return
-        // 클릭 + 길게 누르기 + 선택까지 다 잡아. 클릭만 보면 놓치는 게 많아
-        if (event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED &&
-            event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_LONG_CLICKED &&
-            event?.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_SELECTED) return
-        val node = event.source ?: return
-        val rect = android.graphics.Rect()
-        node.getBoundsInScreen(rect)
-        val x = rect.centerX()
-        val y = rect.centerY()
-        // 컨트롤 버튼(녹화/정지) 클릭은 저장에서 빼야 해
-        // 안 빼면 정지 버튼 누른 것도 매크로에 저장돼
-        if (y < 250) return
-        recordedSteps.add(MacroStep.Touch(x, y))
-        val overlay = recordingOverlay as? android.widget.FrameLayout
-        if (overlay != null) showMarker(overlay, x, y, recordedSteps.size)
-        node.recycle()
-    }
-
-fun showControlOverlay() {
-    val ctx = instance ?: return
-    if (stopButtonView != null) return
-    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-
-    val layout = android.widget.LinearLayout(ctx)
-    layout.orientation = android.widget.LinearLayout.HORIZONTAL
-
-    val recBtn = android.widget.Button(ctx)
-    recBtn.text = "● 녹화"
-    recBtn.setBackgroundColor(android.graphics.Color.RED)
-    recBtn.setTextColor(android.graphics.Color.WHITE)
-    recBtn.setOnClickListener { startRecording() }
-
-    val stopBtn = android.widget.Button(ctx)
-    stopBtn.text = "■ 정지"
-    stopBtn.setBackgroundColor(android.graphics.Color.BLACK)
-    stopBtn.setTextColor(android.graphics.Color.WHITE)
-    stopBtn.setOnClickListener { stopRecording() }
-
-    val playBtn = android.widget.Button(ctx)
-    playBtn.text = "▶ 플레이"
-    playBtn.setBackgroundColor(android.graphics.Color.GREEN)
-    playBtn.setTextColor(android.graphics.Color.WHITE)
-    playBtn.setOnClickListener {
-    hideRecordingOverlay()
-    hideFloating()
-    val m = MacroStore.current ?: MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: return@setOnClickListener
-    startMacro(m)
-    }
-    val closeBtn = android.widget.Button(ctx)
-    closeBtn.text = "✕ 닫기"
-    closeBtn.setBackgroundColor(android.graphics.Color.DKGRAY)
-    closeBtn.setTextColor(android.graphics.Color.WHITE)
-    closeBtn.setOnClickListener {
-        hideControlOverlay()
-        hideRecordingOverlay()
-    }
-    layout.addView(recBtn)
-    layout.addView(stopBtn)
-    layout.addView(playBtn)
-    layout.addView(closeBtn)
-    val params = android.view.WindowManager.LayoutParams(
-        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-        android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-        android.graphics.PixelFormat.TRANSLUCENT
-    )
-    params.gravity = android.view.Gravity.TOP or android.view.Gravity.LEFT
-    params.x = 20
-    params.y = 200
-
-    stopButtonView = layout
-    wm.addView(layout, params)
-    }
-fun hideControlOverlay() {
-    try {
-        val ctx = instance ?: return
-        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-        stopButtonView?.let { wm.removeView(it) }
-    } catch (e: Exception) {}
-    stopButtonView = null
-    }
-fun showPlayMarker(x: Int, y: Int) {
-    val ctx = instance ?: return
-    try {
-        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-        val v = android.view.View(ctx)
-        val d = android.graphics.drawable.GradientDrawable()
-        d.shape = android.graphics.drawable.GradientDrawable.OVAL
-        d.setColor(android.graphics.Color.RED)
-        d.setStroke(4, android.graphics.Color.WHITE)
-        v.background = d
-
-        // showMarker랑 똑같이 상태바 높이 빼기 - 안 빼면 마커가 아래로 밀려
-        var statusBarHeight = 0
-        val resId = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
-        if (resId > 0) {
-            statusBarHeight = ctx.resources.getDimensionPixelSize(resId)
+            hideRecordingOverlay()
+            onStopListener?.invoke()
         }
 
-        val params = android.view.WindowManager.LayoutParams(
-            60, 60,
-            android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            android.graphics.PixelFormat.TRANSLUCENT
-        )
-        params.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-        params.x = x - 30
-        params.y = y - 30
-        wm.addView(v, params)
-
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            try { wm.removeView(v) } catch (e: Exception) {}
-        }, 500)
-        } catch (e: Exception) {}
+        fun startPlayback(steps: List<MacroStep.Touch>) {
+            if (steps.isEmpty()) return
+            showMarkerLayer()
+            var index = 0
+            val handler = Handler(Looper.getMainLooper())
+            fun next() {
+                if (index >= steps.size) return
+                val s = steps[index]
+                showPlayMarker(s.x, s.y)
+                val path = GestureDescription.Builder()
+                    .addStroke(GestureDescription.StrokeDescription(
+                        Path().apply { moveTo(s.x.toFloat(), s.y.toFloat()) }, 0, 100
+                    )).build()
+                instance?.dispatchGesture(path, null, null)
+                index++
+                handler.postDelayed({ next() }, 400)
+            }
+            next()
         }
-fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
-    val ctx = instance ?: return
-    val tv = android.widget.TextView(ctx)
-    tv.text = num.toString()
-    tv.textSize = 16f
-    tv.setTextColor(android.graphics.Color.WHITE)
-    tv.gravity = android.view.Gravity.CENTER
-
-    // 동그랗게 만들기
-    val drawable = android.graphics.drawable.GradientDrawable()
-    drawable.shape = android.graphics.drawable.GradientDrawable.OVAL
-    drawable.setColor(android.graphics.Color.RED)
-    tv.background = drawable
-
-    // 상태바 높이 빼기
-    var statusBarHeight = 0
-    val resId = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
-    if (resId > 0) {
-        statusBarHeight = ctx.resources.getDimensionPixelSize(resId)
     }
-
-    val size = 80
-    val p = android.widget.FrameLayout.LayoutParams(size, size)
-    p.topMargin = y - 40
-    p.topMargin = y - 40 - statusBarHeight
-    parent.addView(tv, p)
-    }
-
-fun hideRecordingOverlay() {
-    try {
-        val ctx = instance ?: return
-        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-        recordingOverlay?.let { wm.removeView(it) }
-    
-    } catch (e: Exception) { }
-    recordingOverlay = null
-    
-    }
-fun showRecordingOverlay() {
-    hideRecordingOverlay()
-    val ctx = instance ?: return
-    val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
-    // NOT_TOUCHABLE이 핵심이야. 이게 없으면 또 벽돌 돼.
-    val params = android.view.WindowManager.LayoutParams(
-        android.view.WindowManager.LayoutParams.MATCH_PARENT,
-        android.view.WindowManager.LayoutParams.MATCH_PARENT,
-        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-        android.graphics.PixelFormat.TRANSLUCENT
-    )
-    val layout = android.widget.FrameLayout(ctx)
-    layout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-    // OnTouchListener 없음. 터치를 절대 안 막아.
-    recordingOverlay = layout
-    wm.addView(layout, params)
-    showControlOverlay()
-    }
-    }
+}
