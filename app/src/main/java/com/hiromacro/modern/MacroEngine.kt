@@ -14,8 +14,9 @@ class MacroEngine(
     private var job: Job? = null
 
     fun start(macro: Macro) {
-        if (running) return
-        running = true
+    job?.cancel()
+    running = false
+    running = true
         job = CoroutineScope(Dispatchers.Default).launch {
             var pc = 0 // 라인 번호, 0부터 시작
             var guard = 0
@@ -76,11 +77,19 @@ class MacroEngine(
     val g = GestureDescription.Builder()
         .addStroke(GestureDescription.StrokeDescription(p, 0, 100))
         .build()
-    withContext(Dispatchers.Main) {
-        service.dispatchGesture(g, null, null)
+    val ok = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { cont ->
+    service.dispatchGesture(g, object : AccessibilityService.GestureResultCallback() {
+        override fun onCompleted(gestureDescription: GestureDescription?) {
+            if (!cont.isCompleted) cont.resume(true)
+        }
+        override fun onCancelled(gestureDescription: GestureDescription?) {
+            if (!cont.isCompleted) cont.resume(false)
+        }
+    }, null)
     }
-    delay(150)
-}
+    android.util.Log.d("HiroMacro", "tap $x,$y result=$ok")
+    delay(200)
+    }
 
     private suspend fun swipe(sx: Int, sy: Int, ex: Int, ey: Int, dur: Long) {
         val p = Path().apply {
