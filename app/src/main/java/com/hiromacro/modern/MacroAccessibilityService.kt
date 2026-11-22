@@ -42,7 +42,6 @@ class MacroAccessibilityService : AccessibilityService() {
             recordedSteps.clear()
             markerCount = 0
             isRecording = true
-            instance?.showFloating()
             instance?.showRecordingOverlay()
         }
 
@@ -183,7 +182,9 @@ fun showControlOverlay() {
     playBtn.setBackgroundColor(android.graphics.Color.GREEN)
     playBtn.setTextColor(android.graphics.Color.WHITE)
     playBtn.setOnClickListener {
-    // 나중에 재생 기능 연결
+    hideRecordingOverlay()
+    hideFloating()
+    MacroStore.current?.let { startMacro(it) }
     }
     val closeBtn = android.widget.Button(ctx)
     closeBtn.text = "✕ 닫기"
