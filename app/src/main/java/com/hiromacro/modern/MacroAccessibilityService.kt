@@ -1,4 +1,4 @@
-package com.example.hiromacromodern
+package com.hiromacro.modern
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
