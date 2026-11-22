@@ -283,24 +283,17 @@ fun showRecordingOverlay() {
     hideRecordingOverlay()
     val ctx = instance ?: return
     val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
+    // NOT_TOUCHABLE이 핵심이야. 이게 없으면 또 벽돌 돼.
     val params = android.view.WindowManager.LayoutParams(
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
         android.view.WindowManager.LayoutParams.MATCH_PARENT,
         android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
         android.graphics.PixelFormat.TRANSLUCENT
     )
     val layout = android.widget.FrameLayout(ctx)
     layout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-    layout.setOnTouchListener { _, ev ->
-        if (ev.action == android.view.MotionEvent.ACTION_DOWN && isRecording) {
-            val x = ev.x.toInt()
-            val y = ev.y.toInt()
-            recordedSteps.add(MacroStep.Touch(x, y))
-            showMarker(layout, x, y, recordedSteps.size)
-            false
-        } else false
-    }
+    // OnTouchListener 없음. 터치를 절대 안 막아.
     recordingOverlay = layout
     wm.addView(layout, params)
     showControlOverlay()
