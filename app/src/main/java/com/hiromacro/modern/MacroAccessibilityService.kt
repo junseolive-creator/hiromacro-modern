@@ -16,6 +16,9 @@ class MacroAccessibilityService : AccessibilityService() {
         fun showControlOverlay() {
             instance?.showControlOverlay()
         }
+        fun showPlayMarker(x: Int, y: Int) {
+        instance?.showPlayMarker(x, y)
+        }
         var recordedSteps = mutableListOf<MacroStep>()
         var recordingTarget: Macro? = null
         var instance: MacroAccessibilityService? = null
@@ -226,7 +229,42 @@ fun hideControlOverlay() {
         stopButtonView?.let { wm.removeView(it) }
     } catch (e: Exception) {}
     stopButtonView = null
-}
+    }
+fun showPlayMarker(x: Int, y: Int) {
+    val ctx = instance ?: return
+    try {
+        val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val v = android.view.View(ctx)
+        val d = android.graphics.drawable.GradientDrawable()
+        d.shape = android.graphics.drawable.GradientDrawable.OVAL
+        d.setColor(android.graphics.Color.RED)
+        d.setStroke(4, android.graphics.Color.WHITE)
+        v.background = d
+
+        // showMarker랑 똑같이 상태바 높이 빼기 - 안 빼면 마커가 아래로 밀려
+        var statusBarHeight = 0
+        val resId = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
+        if (resId > 0) {
+            statusBarHeight = ctx.resources.getDimensionPixelSize(resId)
+        }
+
+        val params = android.view.WindowManager.LayoutParams(
+            60, 60,
+            android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            android.graphics.PixelFormat.TRANSLUCENT
+        )
+        params.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+        params.x = x - 30
+        params.y = y - 30 - statusBarHeight
+        wm.addView(v, params)
+
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try { wm.removeView(v) } catch (e: Exception) {}
+        }, 500)
+        } catch (e: Exception) {}
+        }
 fun showMarker(parent: android.widget.FrameLayout, x: Int, y: Int, num: Int) {
     val ctx = instance ?: return
     val tv = android.widget.TextView(ctx)
