@@ -63,10 +63,11 @@ class MacroAccessibilityService : AccessibilityService() {
                 if (!MacroStore.list.contains(target)) {
                    MacroStore.list.add(target)
                 }
+                MacroStore.save(this)
             }
             recordedSteps.clear()
-         }
-    }
+            }
+            }
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
@@ -193,7 +194,7 @@ fun showControlOverlay() {
     playBtn.setOnClickListener {
     hideRecordingOverlay()
     hideFloating()
-    val m = MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: MacroStore.current ?: return@setOnClickListener
+    val m = MacroStore.current ?: MacroStore.list.lastOrNull { it.steps.isNotEmpty() } ?: return@setOnClickListener
     startMacro(m)
     }
     val closeBtn = android.widget.Button(ctx)
