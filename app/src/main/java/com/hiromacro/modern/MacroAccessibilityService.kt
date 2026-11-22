@@ -278,7 +278,7 @@ fun hideRecordingOverlay() {
     } catch (e: Exception) { }
     recordingOverlay = null
     
-}
+    }
 fun showRecordingOverlay() {
     hideRecordingOverlay()
     val ctx = instance ?: return
@@ -298,25 +298,11 @@ fun showRecordingOverlay() {
             val y = ev.y.toInt()
             recordedSteps.add(MacroStep.Touch(x, y))
             showMarker(layout, x, y, recordedSteps.size)
-            hideRecordingOverlay()
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                val svc = instance ?: return@postDelayed
-                val path = android.graphics.Path().apply {
-                    moveTo(x.toFloat(), y.toFloat())
-                    lineTo(x.toFloat() + 1f, y.toFloat() + 1f)
-                }
-                val desc = android.accessibilityservice.GestureDescription.Builder()
-                    .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 100))
-                    .build()
-                svc.dispatchGesture(desc, null, null)
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    if (isRecording) showRecordingOverlay()
-                }, 150)
-            }, 10)
-            true
+            false
         } else false
     }
     recordingOverlay = layout
     wm.addView(layout, params)
+    showControlOverlay()
     }
     }
