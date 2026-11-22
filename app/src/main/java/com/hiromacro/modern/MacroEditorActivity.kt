@@ -1,4 +1,4 @@
-package com.example.hiromacromodern
+package com.hiromacro.modern
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
