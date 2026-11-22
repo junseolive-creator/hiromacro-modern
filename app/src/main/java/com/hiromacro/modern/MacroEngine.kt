@@ -77,16 +77,16 @@ class MacroEngine(
     val g = GestureDescription.Builder()
         .addStroke(GestureDescription.StrokeDescription(p, 0, 100))
         .build()
-    val ok = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { cont ->
+    val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
     service.dispatchGesture(g, object : AccessibilityService.GestureResultCallback() {
-        override fun onCompleted(gestureDescription: GestureDescription?) {
-            if (!cont.isCompleted) cont.resume(true)
+    override fun onCompleted(gestureDescription: GestureDescription?) {
+        deferred.complete(true)
         }
-        override fun onCancelled(gestureDescription: GestureDescription?) {
-            if (!cont.isCompleted) cont.resume(false)
+    override fun onCancelled(gestureDescription: GestureDescription?) {
+        deferred.complete(false)
         }
     }, null)
-    }
+val ok = deferred.await()
     android.util.Log.d("HiroMacro", "tap $x,$y result=$ok")
     delay(200)
     }
