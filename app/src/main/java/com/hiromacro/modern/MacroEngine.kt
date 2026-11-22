@@ -69,15 +69,18 @@ class MacroEngine(
     }
 
     private suspend fun tap(x: Int, y: Int) {
-        val p = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
-        val g = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(p, 0, 80))
-            .build()
-        withContext(Dispatchers.Main) {
-            service.dispatchGesture(g, null, null)
-        }
-        delay(50)
+    val p = Path().apply {
+        moveTo(x.toFloat(), y.toFloat())
+        lineTo(x.toFloat() + 1f, y.toFloat() + 1f)
     }
+    val g = GestureDescription.Builder()
+        .addStroke(GestureDescription.StrokeDescription(p, 0, 100))
+        .build()
+    withContext(Dispatchers.Main) {
+        service.dispatchGesture(g, null, null)
+    }
+    delay(150)
+}
 
     private suspend fun swipe(sx: Int, sy: Int, ex: Int, ey: Int, dur: Long) {
         val p = Path().apply {
