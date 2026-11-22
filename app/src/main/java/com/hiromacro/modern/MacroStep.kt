@@ -31,7 +31,7 @@ data class Macro(
 ) : Serializable
 object MacroStore {
     var list = mutableListOf<Macro>()
-    var current: Macro? = null
+    var current: Macro = Macro("새 매크로", mutableListOf())
 
     fun save(ctx: android.content.Context) {
         val prefs = ctx.getSharedPreferences("macros", android.content.Context.MODE_PRIVATE)
@@ -101,6 +101,6 @@ object MacroStore {
             }
             list.add(Macro(o.getString("name"), steps))
         }
-        if (current == null) current = list.lastOrNull()
+        if (list.isNotEmpty()) current = list.last()
         }
     }
