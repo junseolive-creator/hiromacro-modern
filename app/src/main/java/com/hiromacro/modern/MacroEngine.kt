@@ -1,13 +1,7 @@
 package com.hiromacro.modern
 
-import 【entity-android¦canonical_name=android】.accessibilityservice.AccessibilityService
-import 【entity-android¦canonical_name=android】.accessibilityservice.GestureDescription
-import 【entity-android¦canonical_name=android】.graphics.Path
-import 【entity-android¦canonical_name=android】.os.Handler
-import 【entity-android¦canonical_name=android】.os.Looper
-
 object MacroEngine {
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var isPlaying = false
     private var currentJob: Runnable? = null
 
@@ -20,7 +14,7 @@ object MacroEngine {
     }
 
     fun play(
-        service: AccessibilityService,
+        service: android.accessibilityservice.AccessibilityService,
         steps: List<MacroStep>,
         onShowMarker: (x: Int, y: Int, index: Int) -> Unit,
         onFinished: () -> Unit
@@ -52,12 +46,12 @@ object MacroEngine {
         handler.postDelayed(job, 300)
     }
 
-    private fun tap(service: AccessibilityService, x: Float, y: Float) {
-        val path = Path()
+    private fun tap(service: android.accessibilityservice.AccessibilityService, x: Float, y: Float) {
+        val path = android.graphics.Path()
         path.moveTo(x, y)
         path.lineTo(x + 1f, y + 1f)
-        val stroke = GestureDescription.StrokeDescription(path, 0, 120)
-        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 120)
+        val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
         service.dispatchGesture(gesture, null, null)
     }
 }
