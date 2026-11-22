@@ -6,5 +6,5 @@
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="true"
     android:canRequestTouchExplorationMode="true"
-    android:description="@string/app_name"
+    android:description="HiroMacro"
     android:notificationTimeout="0" />
