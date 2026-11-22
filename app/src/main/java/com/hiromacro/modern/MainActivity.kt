@@ -1,5 +1,6 @@
 package com.hiromacro.modern
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -8,12 +9,10 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var listLayout: LinearLayout
-    private lateinit var statusText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         title.textSize = 24f
         root.addView(title)
 
-        statusText = TextView(this)
+        val statusText = TextView(this)
         statusText.text = "접근성 서비스를 켜주세요"
         root.addView(statusText)
 
