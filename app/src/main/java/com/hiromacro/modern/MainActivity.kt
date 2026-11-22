@@ -1,7 +1,6 @@
 package com.hiromacro.modern
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -11,132 +10,42 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-
-    private lateinit var listLayout: LinearLayout
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(32, 32, 32, 32)
-
-        val title = TextView(this)
-        title.text = "HiroMacro Modern"
-        title.textSize = 24f
-        root.addView(title)
-
-        val statusText = TextView(this)
-        statusText.text = "접근성 서비스를 켜주세요"
-        root.addView(statusText)
-
-        fun makeBtn(text: String, action: () -> Unit): Button {
-            val b = Button(this)
-            b.text = text
-            b.setOnClickListener { action() }
-            root.addView(b)
-            return b
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 40)
         }
+        val title = TextView(this).apply { text = "HiroMacro"; textSize = 28f }
+        val status = TextView(this).apply { text = "1. 접근성 켜기 -> 2. 컨트롤 표시 -> 3. 다른 앱에서 녹화/재생"; textSize = 16f }
 
-        makeBtn("1. 접근성 설정 열기") {
+        val btnPermission = Button(this).apply { text = "1. 접근성 권한 켜기" }
+        btnPermission.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
-        makeBtn("2. 컨트롤 버튼 띄우기") {
+        val btnShow = Button(this).apply { text = "2. 컨트롤 표시" }
+        btnShow.setOnClickListener {
             MacroAccessibilityService.showControlOverlay()
+            Toast.makeText(this, "다른 앱으로 나가서 떠 있는 버튼을 눌러보세요", Toast.LENGTH_LONG).show()
         }
 
-        makeBtn("3. 녹화 시작") {
-            MacroAccessibilityService.startRecording()
-            moveTaskToBack(true)
-        }
+        val btnRecord = Button(this).apply { text = "3. 녹화 시작" }
+        btnRecord.setOnClickListener { MacroAccessibilityService.startRecording() }
 
-        makeBtn("4. 녹화 정지 + 저장") {
-            MacroAccessibilityService.stopRecording()
-            saveMacro()
-        }
+        val btnStop = Button(this).apply { text = "4. 녹화 중지 / 저장" }
+        btnStop.setOnClickListener { MacroAccessibilityService.stopRecordingAndSave() }
 
-        makeBtn("5. 마지막 매크로 재생") {
-            val steps = loadLastMacro()
-            if (steps.isEmpty()) {
-                Toast.makeText(this, "저장된 매크로가 없어", Toast.LENGTH_SHORT).show()
-            } else {
-                moveTaskToBack(true)
-                MacroAccessibilityService.startPlayback(steps)
-            }
-        }
+        val btnPlay = Button(this).apply { text = "5. 마지막 매크로 재생 (테스트용)" }
+        btnPlay.setOnClickListener { MacroAccessibilityService.startPlayback() }
 
-        listLayout = LinearLayout(this)
-        listLayout.orientation = LinearLayout.VERTICAL
-        root.addView(listLayout)
-
-        setContentView(root)
-
-        MacroAccessibilityService.onStopListener = {
-            runOnUiThread {
-                saveMacro()
-                refreshList()
-            }
-        }
-        refreshList()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        refreshList()
-    }
-
-    private fun saveMacro() {
-        val steps = MacroAccessibilityService.recordedSteps.toList()
-        if (steps.isEmpty()) return
-        val prefs = getSharedPreferences("macros", Context.MODE_PRIVATE)
-        val old = prefs.getString("list", "") ?: ""
-        val one = steps.joinToString(";") { "${it.x},${it.y}" }
-        prefs.edit().putString("list", if (old.isEmpty()) one else "$old\n$one").apply()
-        Toast.makeText(this, "${steps.size}개 저장됨", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun loadLastMacro(): List<MacroStep.Touch> {
-        val prefs = getSharedPreferences("macros", Context.MODE_PRIVATE)
-        val all = prefs.getString("list", "") ?: ""
-        if (all.isEmpty()) return emptyList()
-        val last = all.lines().last { it.isNotBlank() }
-        return last.split(";").mapNotNull {
-            val p = it.split(",")
-            if (p.size == 2) MacroStep.Touch(p[0].toIntOrNull() ?: return@mapNotNull null, p[1].toIntOrNull() ?: return@mapNotNull null) else null
-        }
-    }
-
-    private fun loadAll(): List<List<MacroStep.Touch>> {
-        val prefs = getSharedPreferences("macros", Context.MODE_PRIVATE)
-        val all = prefs.getString("list", "") ?: ""
-        if (all.isEmpty()) return emptyList()
-        return all.lines().filter { it.isNotBlank() }.map { line ->
-            line.split(";").mapNotNull {
-                val p = it.split(",")
-                if (p.size == 2) MacroStep.Touch(p[0].toIntOrNull() ?: return@mapNotNull null, p[1].toIntOrNull() ?: return@mapNotNull null) else null
-            }
-        }
-    }
-
-    private fun refreshList() {
-        listLayout.removeAllViews()
-        val all = loadAll()
-        all.forEachIndexed { index, steps ->
-            val tv = TextView(this)
-            tv.text = "매크로 ${index + 1} - ${steps.size}번 터치"
-            tv.textSize = 16f
-            tv.setPadding(0, 16, 0, 16)
-            tv.setOnClickListener {
-                moveTaskToBack(true)
-                MacroAccessibilityService.startPlayback(steps)
-            }
-            listLayout.addView(tv)
-        }
-        if (all.isEmpty()) {
-            val tv = TextView(this)
-            tv.text = "저장된 매크로 없음"
-            listLayout.addView(tv)
-        }
+        layout.addView(title)
+        layout.addView(status)
+        layout.addView(btnPermission)
+        layout.addView(btnShow)
+        layout.addView(btnRecord)
+        layout.addView(btnStop)
+        layout.addView(btnPlay)
+        setContentView(layout)
     }
 }
