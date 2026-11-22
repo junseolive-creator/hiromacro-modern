@@ -7,11 +7,6 @@ import android.view.Gravity
 import android.widget.*
 import android.app.Activity
 
-object MacroStore {
-    var current: Macro = Macro("새 매크로", mutableListOf())
-    var list: MutableList<Macro> = mutableListOf()
-}
-
 class MacroEditorActivity : Activity() {
 
     private lateinit var listLayout: LinearLayout
