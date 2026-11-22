@@ -1,21 +1,6 @@
 package com.hiromacro.modern
 
-import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.graphics.PixelFormat
-import android.graphics.Rect
-import android.os.Handler
-import android.os.Looper
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.WindowManager
-import android.view.accessibility.AccessibilityEvent
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-
-class MacroAccessibilityService : AccessibilityService() {
+class MacroAccessibilityService : android.accessibilityservice.AccessibilityService() {
     companion object {
         var instance: MacroAccessibilityService? = null
         fun showControlOverlay() { instance?.showControlOverlayInternal() }
@@ -25,19 +10,19 @@ class MacroAccessibilityService : AccessibilityService() {
         fun startPlayback() { instance?.startPlaybackInternal() }
     }
 
-    private var windowManager: WindowManager? = null
-    private var controlView: View? = null
-    private var markerView: View? = null
-    private var markerText: TextView? = null
+    private var windowManager: android.view.WindowManager? = null
+    private var controlView: android.view.View? = null
+    private var markerView: android.view.View? = null
+    private var markerText: android.widget.TextView? = null
     private var isRecording = false
     private var currentSteps = mutableListOf<MacroStep>()
     private var lastEventTime = 0L
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowManager = getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
     }
     override fun onDestroy() {
         super.onDestroy()
@@ -47,13 +32,13 @@ class MacroAccessibilityService : AccessibilityService() {
     }
     override fun onInterrupt() {}
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
         if (!isRecording || event == null) return
-        if (event.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED &&
-            event.eventType != AccessibilityEvent.TYPE_VIEW_LONG_CLICKED &&
-            event.eventType != AccessibilityEvent.TYPE_VIEW_SELECTED) return
+        if (event.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED &&
+            event.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_LONG_CLICKED &&
+            event.eventType != android.view.accessibility.AccessibilityEvent.TYPE_VIEW_SELECTED) return
         val source = event.source ?: return
-        val rect = Rect()
+        val rect = android.graphics.Rect()
         source.getBoundsInScreen(rect)
         source.recycle()
         if (rect.width() <= 0 || rect.height() <= 0) return
@@ -67,27 +52,38 @@ class MacroAccessibilityService : AccessibilityService() {
         lastEventTime = now
         currentSteps.add(MacroStep.Touch(x, y))
         showPlayMarker(x, y, currentSteps.size)
-        Toast.makeText(this, "${currentSteps.size}번 터치 기록", Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, "${currentSteps.size}번 터치 기록", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun showControlOverlayInternal() {
         if (controlView != null) return
         val wm = windowManager ?: return
-        val view = LayoutInflater.from(this).inflate(R.layout.overlay_control, null)
-        view.findViewById<Button>(R.id.btnRecord).setOnClickListener { startRecordingInternal() }
-        view.findViewById<Button>(R.id.btnPlay).setOnClickListener { startPlaybackInternal() }
-        view.findViewById<Button>(R.id.btnStop).setOnClickListener { stopRecordingAndSaveInternal() }
-        view.findViewById<Button>(R.id.btnClose).setOnClickListener { hideControlOverlayInternal() }
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
+        val layout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+            setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
+        }
+        fun makeBtn(text: String, onClick: () -> Unit): android.widget.Button {
+            val b = android.widget.Button(this)
+            b.text = text
+            b.setOnClickListener { onClick() }
+            return b
+        }
+        layout.addView(makeBtn("● 녹화") { startRecordingInternal() })
+        layout.addView(makeBtn("▶ 재생") { startPlaybackInternal() })
+        layout.addView(makeBtn("■ 정지") { stopRecordingAndSaveInternal() })
+        layout.addView(makeBtn("X 닫기") { hideControlOverlayInternal() })
+
+        val params = android.view.WindowManager.LayoutParams(
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+            android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            android.graphics.PixelFormat.TRANSLUCENT
         )
-        params.gravity = Gravity.TOP or Gravity.END
+        params.gravity = android.view.Gravity.TOP or android.view.Gravity.END
         params.y = 200
-        try { wm.addView(view, params); controlView = view } catch (e: Exception) { e.printStackTrace() }
+        try { wm.addView(layout, params); controlView = layout } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun hideControlOverlayInternal() {
@@ -100,22 +96,22 @@ class MacroAccessibilityService : AccessibilityService() {
         isRecording = true
         currentSteps = mutableListOf()
         lastEventTime = System.currentTimeMillis()
-        Toast.makeText(this, "녹화 시작", Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, "녹화 시작", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun stopRecordingAndSaveInternal() {
         if (!isRecording) return
         isRecording = false
         hidePlayMarker()
-        if (currentSteps.isEmpty()) { Toast.makeText(this, "기록된 터치가 없어요", Toast.LENGTH_SHORT).show(); return }
+        if (currentSteps.isEmpty()) { android.widget.Toast.makeText(this, "기록된 터치가 없어요", android.widget.Toast.LENGTH_SHORT).show(); return }
         MacroStore.save(this, "매크로 1", currentSteps)
-        Toast.makeText(this, "${currentSteps.size}개 터치 저장 완료", Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, "${currentSteps.size}개 터치 저장 완료", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun startPlaybackInternal() {
-        if (MacroEngine.isPlaying()) { Toast.makeText(this, "이미 재생 중", Toast.LENGTH_SHORT).show(); return }
+        if (MacroEngine.isPlaying()) { android.widget.Toast.makeText(this, "이미 재생 중", android.widget.Toast.LENGTH_SHORT).show(); return }
         val steps = MacroStore.loadLast(this)
-        if (steps.isNullOrEmpty()) { Toast.makeText(this, "저장된 매크로가 없어요", Toast.LENGTH_SHORT).show(); return }
+        if (steps.isNullOrEmpty()) { android.widget.Toast.makeText(this, "저장된 매크로가 없어요", android.widget.Toast.LENGTH_SHORT).show(); return }
         hideControlOverlayInternal()
         MacroEngine.play(this, steps,
             onShowMarker = { x, y, idx -> showPlayMarker(x, y, idx) },
@@ -128,23 +124,27 @@ class MacroAccessibilityService : AccessibilityService() {
             try {
                 val wm = windowManager ?: return@post
                 if (markerView == null) {
-                    val v = LayoutInflater.from(this).inflate(R.layout.view_play_marker, null)
-                    markerText = v.findViewById(R.id.markerNumber)
-                    val params = WindowManager.LayoutParams(
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-                        PixelFormat.TRANSLUCENT
+                    val tv = android.widget.TextView(this).apply {
+                        textSize = 30f
+                        setTextColor(android.graphics.Color.WHITE)
+                        setBackgroundColor(android.graphics.Color.parseColor("#AAFF0000"))
+                        gravity = android.view.Gravity.CENTER
+                    }
+                    markerText = tv
+                    val params = android.view.WindowManager.LayoutParams(
+                        100, 100,
+                        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                        android.graphics.PixelFormat.TRANSLUCENT
                     )
-                    params.gravity = Gravity.TOP or Gravity.START
-                    wm.addView(v, params)
-                    markerView = v
+                    params.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+                    wm.addView(tv, params)
+                    markerView = tv
                 }
                 markerText?.text = idx.toString()
-                val params = markerView?.layoutParams as? WindowManager.LayoutParams
+                val params = markerView?.layoutParams as? android.view.WindowManager.LayoutParams
                 if (params != null) { params.x = x - 50; params.y = y - 50; wm.updateViewLayout(markerView, params) }
-                markerView?.visibility = View.VISIBLE
+                markerView?.visibility = android.view.View.VISIBLE
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
